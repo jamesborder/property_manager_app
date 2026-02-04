@@ -174,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                     Text(
-                      'NestJS:PostgresSQL:Flutter:Provider:main',
+                      'NestJS:PostgresSQL:Feature-Provider',
                       style: TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                   ],
