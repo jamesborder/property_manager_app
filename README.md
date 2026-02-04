@@ -9,7 +9,7 @@ Each branch implements identical functionality using a different state managemen
 | `main`                  | Variable         | ✅ Complete |
 | `feature-provider-base` | Provider         | ✅ Complete |
 | `feature-riverpod-base` | Riverpod         | ✅ Complete |
-| `feature-cubit-base`    | Bloc/Cubit       | 🔜 Next |
+| `feature-cubit-base`    | Bloc/Cubit       | ✅ Complete |
 
 ---
 
