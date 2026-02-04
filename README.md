@@ -1,14 +1,15 @@
-# 🎩 HSOA-Opoly
+# 🎩 Property Manager
 
 **A Monopoly property management dashboard built with Flutter — designed as a state management comparison across branches.**
 
 Each branch implements identical functionality using a different state management approach, while sharing the same pure-Dart business logic (`GameRules`). The backend API and UI are constant — only the state layer changes.
 
-| Branch | State Management | Status |
-|--------|-----------------|--------|
-| `main` | Provider | ✅ Complete |
-| `riverpod` | Riverpod | ✅ Complete |
-| `cubit` | Bloc/Cubit | 🔜 Next |
+| Branch                  | State Management | Status |
+|-------------------------|------------------|--------|
+| `main`                  | Variable         | ✅ Complete |
+| `feature-provider-base` | Provider         | ✅ Complete |
+| `feature-riverpod-base` | Riverpod         | ✅ Complete |
+| `feature-cubit-base`    | Bloc/Cubit       | 🔜 Next |
 
 ---
 
