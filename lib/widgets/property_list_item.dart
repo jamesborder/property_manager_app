@@ -1,17 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/property.dart';
-import '../providers/game_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PropertyListItem extends StatelessWidget {
+import '../models/property.dart';
+import '../providers/providers.dart';
+
+class PropertyListItem extends ConsumerWidget {
   final Property property;
   final VoidCallback onTap;
 
   const PropertyListItem({super.key, required this.property, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
       decoration: BoxDecoration(
@@ -32,16 +33,11 @@ class PropertyListItem extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /// Owned vs Available property card
                         if (property.isOwned) ...[
-                          /// If owned, show property name, price, rent info, and collect button
-                          _buildPlayerOwnedPropertyCard(context),
+                          _buildPlayerOwnedPropertyCard(context, ref),
                         ] else ...[
-                          /// If not owned, show property name, price, and show info button
                           _buildAvailablePropertyCard(context),
                         ],
-
-                        ///
                       ],
                     ),
                   ),
@@ -52,142 +48,106 @@ class PropertyListItem extends StatelessWidget {
         ),
       ),
     );
-
-    /// END build
   }
 
-  /// Build available property card
   Widget _buildAvailablePropertyCard(BuildContext context) {
-    return Builder(
-      builder: (context) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ///
-            Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// Property name
-                Text(
-                  property.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        decoration: property.isMortgaged ? TextDecoration.lineThrough : null,
-                      ),
-                ),
-
-                /// Property price
-                Text(
-                  'Price: \$${property.purchasePrice}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ],
+            Text(
+              property.name,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    decoration: property.isMortgaged ? TextDecoration.lineThrough : null,
+                  ),
             ),
-
-            /// Property info button
-            ElevatedButton(
-              onPressed: () {
-                onTap();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade500,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              child: const Text('Property Info >'),
+            Text(
+              'Price: \$${property.purchasePrice}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
             ),
-
-            ///
           ],
-        );
-
-        ///
-      },
+        ),
+        ElevatedButton(
+          onPressed: () {
+            onTap();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade500,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          child: const Text('Property Info >'),
+        ),
+      ],
     );
   }
 
-  /// Build owned property card
-  Widget _buildPlayerOwnedPropertyCard(BuildContext context) {
-    return Builder(
-      builder: (context) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
+  Widget _buildPlayerOwnedPropertyCard(BuildContext context, WidgetRef ref) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ///
-            Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  property.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                Text(
-                  'Purchase price: \$${property.purchasePrice}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                _buildRentInfo(context),
-              ],
+            Text(
+              property.name,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-
-            ///
-            if (property.isMortgaged) ...[
-
-              /// Mortgaged property icon
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Icon(
-                  Icons.block,
-                  color: Colors.red.shade700,
-                  size: 32,
-                ),
-              ),
-
-            ] else ...[
-
-              /// Collect Rent button
-              ElevatedButton(
-                onPressed: () {
-                  _collectRent(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                child: const Text('Collect Rent'),
-              ),
-
-              ///
-            ],
+            Text(
+              'Purchase price: \$${property.purchasePrice}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            _buildRentInfo(context, ref),
           ],
-        );
-
-        ///
-      },
+        ),
+        if (property.isMortgaged) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Icon(
+              Icons.block,
+              color: Colors.red.shade700,
+              size: 32,
+            ),
+          ),
+        ] else ...[
+          ElevatedButton(
+            onPressed: () {
+              _collectRent(context, ref);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade700,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            child: const Text('Collect Rent'),
+          ),
+        ],
+      ],
     );
   }
 
-  /// Build rent info widget
-  Widget _buildRentInfo(BuildContext context) {
-    final provider = context.watch<GameProvider>();
+  Widget _buildRentInfo(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(gameNotifierProvider.notifier);
 
-    var actualRent = provider.getRentDisplayString(property);
-
-    final hasBonus = provider.hasColorGroupBonus(property);
+    var actualRent = notifier.getRentDisplayString(property);
+    final hasBonus = notifier.hasColorGroupBonus(property);
 
     return Row(
       children: [
@@ -211,19 +171,15 @@ class PropertyListItem extends StatelessWidget {
         _PropertyStatusBadge(property: property),
       ],
     );
-
-    ///
   }
 
-  /// Handle Property rent collection
-  void _collectRent(BuildContext context) {
+  void _collectRent(BuildContext context, WidgetRef ref) {
     if (kDebugMode) print('Collect rent for ${property.name}');
 
-    final provider = context.read<GameProvider>();
+    final notifier = ref.read(gameNotifierProvider.notifier);
 
     /// If property is a utility, prompt for dice roll value
     if (property.isUtility) {
-      /// Show dialog to input dice roll
       showDialog(
         context: context,
         builder: (dialogContext) {
@@ -261,14 +217,14 @@ class PropertyListItem extends StatelessWidget {
                     return;
                   }
 
-                  final multiplier = provider.getUtilityMultiplier();
+                  final multiplier = notifier.getUtilityMultiplier();
                   final rentValue = diceRoll * multiplier;
 
                   if (kDebugMode) print('Utility rent: $diceRoll x $multiplier = $rentValue');
 
                   Navigator.of(dialogContext).pop();
 
-                  final success = await provider.adjustCash(rentValue);
+                  final success = await notifier.adjustCash(rentValue);
 
                   if (success && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -287,13 +243,12 @@ class PropertyListItem extends StatelessWidget {
     }
 
     /// Get actual rent amount
-    var rentDisplayString = provider.getRentDisplayString(property);
-    int rentValue = provider.getActualRentValue(property);
-    final hasBonus = provider.hasColorGroupBonus(property);
+    var rentDisplayString = notifier.getRentDisplayString(property);
+    int rentValue = notifier.getActualRentValue(property);
+    final hasBonus = notifier.hasColorGroupBonus(property);
 
     if (kDebugMode) print('Collecting rent: $rentDisplayString (from base rent: ${property.currentRent}, bonus applied: $hasBonus)');
 
-    /// Throw Confirmation dialog
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -310,7 +265,7 @@ class PropertyListItem extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
-                final success = await provider.adjustCash(rentValue);
+                final success = await notifier.adjustCash(rentValue);
                 if (success && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Collected $rentDisplayString from ${property.name}')),
@@ -324,11 +279,9 @@ class PropertyListItem extends StatelessWidget {
       },
     );
   }
-
-  ///
 }
 
-/// Status badge widget
+/// Status badge widget — no provider access, pure widget
 class _PropertyStatusBadge extends StatelessWidget {
   final Property property;
 

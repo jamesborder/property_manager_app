@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import '../providers/game_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class TransactionSheet extends StatefulWidget {
+import '../providers/providers.dart';
+
+class TransactionSheet extends ConsumerStatefulWidget {
   const TransactionSheet({super.key});
 
   @override
-  State<TransactionSheet> createState() => _TransactionSheetState();
+  ConsumerState<TransactionSheet> createState() => _TransactionSheetState();
 }
 
-class _TransactionSheetState extends State<TransactionSheet> {
+class _TransactionSheetState extends ConsumerState<TransactionSheet> {
   final _amountController = TextEditingController();
   bool _isReceiving = true;
   String? _errorMessage;
@@ -49,8 +50,8 @@ class _TransactionSheetState extends State<TransactionSheet> {
       _errorMessage = null;
     });
 
-    final provider = context.read<GameProvider>();
-    final success = await provider.adjustCash(amount);
+    final notifier = ref.read(gameNotifierProvider.notifier);
+    final success = await notifier.adjustCash(amount);
 
     if (!mounted) return;
 
@@ -59,7 +60,7 @@ class _TransactionSheetState extends State<TransactionSheet> {
     } else {
       setState(() {
         _isProcessing = false;
-        _errorMessage = provider.error ?? 'Insufficient funds';
+        _errorMessage = 'Insufficient funds';
       });
     }
   }

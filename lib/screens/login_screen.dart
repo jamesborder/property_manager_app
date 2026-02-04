@@ -1,21 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/game_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/providers.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
-
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   static const List<String> _allowedPlayers = [
     'Jim',
   ];
@@ -31,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleSubmit() async {
-
     final name = _nameController.text.trim();
 
     if (name.isEmpty) {
@@ -39,7 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Case-insensitive check against allowed players
     final matchedPlayer = _allowedPlayers.cast<String?>().firstWhere(
           (player) => player!.toLowerCase() == name.toLowerCase(),
           orElse: () => null,
@@ -56,48 +52,38 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Create provider and load state from API
-      if (kDebugMode) print('[Login] Creating provider for $matchedPlayer');
-      final provider = GameProvider(playerId: matchedPlayer);
-      
-      if (kDebugMode) print('[Login] Loading game state...');
-      await provider.loadGameState();
-      if (kDebugMode) print('[Login] Game state loaded. Error: ${provider.error}');
+      if (kDebugMode) print('[Login] Setting playerIdProvider for $matchedPlayer');
+
+      // Set player ID — triggers gameNotifierProvider.build()
+      ref.read(playerIdProvider.notifier).state = matchedPlayer;
+
+      // Await the game state load
+      if (kDebugMode) print('[Login] Awaiting game state...');
+      await ref.read(gameNotifierProvider.future);
 
       if (!mounted) return;
-
-      if (provider.error != null) {
-        setState(() {
-          _isLoading = false;
-          _errorText = provider.error;
-        });
-        return;
-      }
 
       // Save player for auto-login
       if (kDebugMode) print('[Login] Saving player...');
       await AuthService.savePlayer(matchedPlayer);
-      
+
       if (!mounted) return;
 
       if (kDebugMode) print('[Login] Navigating to home...');
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider.value(
-            value: provider,
-            child: const HomeScreen(),
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e, stack) {
       if (kDebugMode) {
-        print('[Login] Unexpected error: $e');
+        print('[Login] Error: $e');
         print(stack);
       }
+      // Reset player ID on failure
+      ref.read(playerIdProvider.notifier).state = null;
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorText = 'Unexpected error: $e';
+          _errorText = 'Failed to load game: $e';
         });
       }
     }
@@ -174,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                     Text(
-                      'NestJS:PostgresSQL:Feature-Provider',
+                      'NestJS:PostgresSQL:Flutter:Riverpod',
                       style: TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                   ],

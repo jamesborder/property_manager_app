@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/property.dart';
-import '../providers/game_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class PropertyDeedDialog extends StatelessWidget {
+import '../models/property.dart';
+import '../providers/game_notifier.dart';
+import '../providers/providers.dart';
+
+class PropertyDeedDialog extends ConsumerWidget {
   final String propertyId;
 
   const PropertyDeedDialog({super.key, required this.propertyId});
 
   @override
-  Widget build(BuildContext context) {
-
-    final provider = context.watch<GameProvider>();
-    final property = provider.properties.firstWhere((p) => p.id == propertyId);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(gameNotifierProvider).requireValue;
+    final property = state.properties.firstWhere((p) => p.id == propertyId);
 
     return Dialog(
       child: Container(
@@ -24,26 +25,13 @@ class PropertyDeedDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              /// Header with color/icon
               _PropertyHeader(property: property),
-
-              /// Loading indicator
-              if (provider.isLoading) const LinearProgressIndicator(),
 
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// Error message
-                    if (provider.error != null) ...[
-                      _ErrorBanner(
-                        message: provider.error!,
-                        onDismiss: () => provider.clearError(),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
                     /// Price & Status
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -63,9 +51,9 @@ class PropertyDeedDialog extends StatelessWidget {
                     if (property.isStreet)
                       _StreetRentTable(property: property)
                     else if (property.isRailroad)
-                      _RailroadRentTable(property: property, provider: provider)
+                      _RailroadRentTable(property: property)
                     else if (property.isUtility)
-                      _UtilityRentInfo(provider: provider),
+                      const _UtilityRentInfo(),
 
                     const SizedBox(height: 8),
 
@@ -86,7 +74,7 @@ class PropertyDeedDialog extends StatelessWidget {
                     const SizedBox(height: 12),
 
                     /// Actions
-                    _ActionButtons(property: property, provider: provider),
+                    _ActionButtons(property: property),
                   ],
                 ),
               ),
@@ -153,48 +141,13 @@ class _PropertyHeader extends StatelessWidget {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  final String message;
-  final VoidCallback onDismiss;
-
-  const _ErrorBanner({required this.message, required this.onDismiss});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(message, style: TextStyle(color: Colors.red.shade700)),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, size: 18),
-            onPressed: onDismiss,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StatusChip extends StatelessWidget {
-
   final Property property;
 
   const _StatusChip({required this.property});
 
   @override
   Widget build(BuildContext context) {
-
     Color statusColor() {
       if (property.isMortgaged) {
         return Colors.red.withValues(alpha: 0.2);
@@ -303,16 +256,17 @@ class _StreetRentTable extends StatelessWidget {
   }
 }
 
-class _RailroadRentTable extends StatelessWidget {
+class _RailroadRentTable extends ConsumerWidget {
   final Property property;
-  final GameProvider provider;
 
-  const _RailroadRentTable({required this.property, required this.provider});
+  const _RailroadRentTable({required this.property});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(gameNotifierProvider);
+    final notifier = ref.read(gameNotifierProvider.notifier);
     final labels = ['1 Railroad', '2 Railroads', '3 Railroads', '4 Railroads'];
-    final ownedCount = provider.getOwnedRailroadCount();
+    final ownedCount = notifier.getOwnedRailroadCount();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,8 +286,8 @@ class _RailroadRentTable extends StatelessWidget {
           ),
           child: Column(
             children: List.generate(4, (index) {
-              final isCurrentLevel = property.isOwned && 
-                  !property.isMortgaged && 
+              final isCurrentLevel = property.isOwned &&
+                  !property.isMortgaged &&
                   ownedCount == index + 1;
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -389,15 +343,15 @@ class _RailroadRentTable extends StatelessWidget {
   }
 }
 
-class _UtilityRentInfo extends StatelessWidget {
-  final GameProvider provider;
-
-  const _UtilityRentInfo({required this.provider});
+class _UtilityRentInfo extends ConsumerWidget {
+  const _UtilityRentInfo();
 
   @override
-  Widget build(BuildContext context) {
-    final ownedCount = provider.getOwnedUtilityCount();
-    final multiplier = provider.getUtilityMultiplier();
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(gameNotifierProvider);
+    final notifier = ref.read(gameNotifierProvider.notifier);
+    final ownedCount = notifier.getOwnedUtilityCount();
+    final multiplier = notifier.getUtilityMultiplier();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,14 +376,12 @@ class _UtilityRentInfo extends StatelessWidget {
                 value: '4× dice roll',
                 isActive: ownedCount == 1,
                 showBorder: true,
-                context: context,
               ),
               _UtilityRentRow(
                 label: '2 Utilities owned',
                 value: '10× dice roll',
                 isActive: ownedCount >= 2,
                 showBorder: false,
-                context: context,
               ),
             ],
           ),
@@ -455,18 +407,16 @@ class _UtilityRentRow extends StatelessWidget {
   final String value;
   final bool isActive;
   final bool showBorder;
-  final BuildContext context;
 
   const _UtilityRentRow({
     required this.label,
     required this.value,
     required this.isActive,
     required this.showBorder,
-    required this.context,
   });
 
   @override
-  Widget build(BuildContext _) {
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -536,48 +486,45 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _ActionButtons extends StatelessWidget {
+class _ActionButtons extends ConsumerWidget {
   final Property property;
-  final GameProvider provider;
 
-  const _ActionButtons({required this.property, required this.provider});
-
-  bool get _isDisabled => provider.isLoading;
+  const _ActionButtons({required this.property});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(gameNotifierProvider.notifier);
 
     if (!property.isOwned) {
-      return SizedBox(width: double.infinity, child: _buildPurchaseButton(context));
+      return SizedBox(width: double.infinity, child: _buildPurchaseButton(context, notifier));
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Only show house buttons for streets
         if (property.isStreet && !property.isMortgaged) ...[
           Row(
             children: [
-              Expanded(child: _buildHouseButton(context)),
+              Expanded(child: _buildHouseButton(context, notifier)),
               const SizedBox(width: 8),
-              Expanded(child: _buildSellImprovementButton(context)),
+              Expanded(child: _buildSellImprovementButton(context, notifier)),
             ],
           ),
           const SizedBox(height: 8),
         ],
-        _buildMortgageButton(context),
+        _buildMortgageButton(context, notifier),
         const SizedBox(height: 8),
-        _buildReleaseButton(context),
+        _buildReleaseButton(context, notifier),
       ],
     );
   }
 
-  Widget _buildPurchaseButton(BuildContext context) {
-    final canPurchase = provider.canPurchase(property) && !_isDisabled;
+  Widget _buildPurchaseButton(BuildContext context, GameNotifier notifier) {
+    final canPurchase = notifier.canPurchase(property);
     return FilledButton.icon(
       onPressed: canPurchase
           ? () async {
-              final success = await provider.purchaseProperty(property);
+              final success = await notifier.purchaseProperty(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Purchased ${property.name}!');
               }
@@ -596,11 +543,11 @@ class _ActionButtons extends StatelessWidget {
     );
   }
 
-  Widget _buildHouseButton(BuildContext context) {
-    final canBuildHouse = provider.canBuildHouse(property) && !_isDisabled;
-    final canBuildHotel = provider.canBuildHotel(property) && !_isDisabled;
+  Widget _buildHouseButton(BuildContext context, GameNotifier notifier) {
+    final canBuildHouse = notifier.canBuildHouse(property);
+    final canBuildHotel = notifier.canBuildHotel(property);
 
-    if (canBuildHotel || (property.houseCount == 4 && !_isDisabled)) {
+    if (canBuildHotel || property.houseCount == 4) {
       return FilledButton.tonal(
         style: FilledButton.styleFrom(
           shape: RoundedRectangleBorder(
@@ -609,7 +556,7 @@ class _ActionButtons extends StatelessWidget {
         ),
         onPressed: canBuildHotel
             ? () async {
-                final success = await provider.buildHotel(property);
+                final success = await notifier.buildHotel(property);
                 if (success && context.mounted) {
                   _showSnackBar(context, 'Built hotel on ${property.name}!');
                 }
@@ -627,7 +574,7 @@ class _ActionButtons extends StatelessWidget {
       ),
       onPressed: canBuildHouse
           ? () async {
-              final success = await provider.buildHouse(property);
+              final success = await notifier.buildHouse(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Built house on ${property.name}!');
               }
@@ -637,8 +584,8 @@ class _ActionButtons extends StatelessWidget {
     );
   }
 
-  Widget _buildSellImprovementButton(BuildContext context) {
-    final canSell = provider.canSellImprovement(property) && !_isDisabled;
+  Widget _buildSellImprovementButton(BuildContext context, GameNotifier notifier) {
+    final canSell = notifier.canSellImprovement(property);
     return FilledButton.tonal(
       style: FilledButton.styleFrom(
         backgroundColor: Colors.red.withAlpha(50),
@@ -648,7 +595,7 @@ class _ActionButtons extends StatelessWidget {
       ),
       onPressed: canSell
           ? () async {
-              final success = await provider.sellImprovement(property);
+              final success = await notifier.sellImprovement(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Sold improvement for \$${property.houseCost ~/ 2}');
               }
@@ -658,9 +605,9 @@ class _ActionButtons extends StatelessWidget {
     );
   }
 
-  Widget _buildMortgageButton(BuildContext context) {
+  Widget _buildMortgageButton(BuildContext context, GameNotifier notifier) {
     if (property.isMortgaged) {
-      final canUnmortgage = provider.canUnmortgage(property) && !_isDisabled;
+      final canUnmortgage = notifier.canUnmortgage(property);
       return OutlinedButton(
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(
@@ -669,7 +616,7 @@ class _ActionButtons extends StatelessWidget {
         ),
         onPressed: canUnmortgage
             ? () async {
-                final success = await provider.unmortgage(property);
+                final success = await notifier.unmortgage(property);
                 if (success && context.mounted) {
                   _showSnackBar(context, 'Unmortgaged ${property.name}');
                 }
@@ -679,7 +626,7 @@ class _ActionButtons extends StatelessWidget {
       );
     }
 
-    final canMortgage = provider.canMortgage(property) && !_isDisabled;
+    final canMortgage = notifier.canMortgage(property);
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
         shape: RoundedRectangleBorder(
@@ -688,7 +635,7 @@ class _ActionButtons extends StatelessWidget {
       ),
       onPressed: canMortgage
           ? () async {
-              final success = await provider.mortgage(property);
+              final success = await notifier.mortgage(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Mortgaged for \$${property.mortgageValue}');
               }
@@ -698,10 +645,10 @@ class _ActionButtons extends StatelessWidget {
     );
   }
 
-  Widget _buildReleaseButton(BuildContext context) {
-    final canRelease = provider.canReleaseProperty(property) && !_isDisabled;
+  Widget _buildReleaseButton(BuildContext context, GameNotifier notifier) {
+    final canRelease = notifier.canReleaseProperty(property);
     return OutlinedButton.icon(
-      onPressed: canRelease ? () => _showReleaseConfirmation(context) : null,
+      onPressed: canRelease ? () => _showReleaseConfirmation(context, notifier) : null,
       icon: const Icon(Icons.output),
       label: const Text('Release Property'),
       style: OutlinedButton.styleFrom(
@@ -713,7 +660,7 @@ class _ActionButtons extends StatelessWidget {
     );
   }
 
-  void _showReleaseConfirmation(BuildContext context) {
+  void _showReleaseConfirmation(BuildContext context, GameNotifier notifier) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -730,7 +677,7 @@ class _ActionButtons extends StatelessWidget {
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final success = await provider.releaseProperty(property);
+              final success = await notifier.releaseProperty(property);
               if (success && context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
