@@ -9,7 +9,7 @@ Each branch implements identical functionality using a different state managemen
 | `main`                  | Variable         | ✅ Complete |
 | `feature-provider-base` | Provider         | ✅ Complete |
 | `feature-riverpod-base` | Riverpod         | ✅ Complete |
-| `feature-cubit-base`    | Bloc/Cubit       | 🔜 Next |
+| `feature-cubit-base`    | Bloc/Cubit       | ✅ Complete |
 
 ---
 
@@ -59,18 +59,36 @@ Players manage a full Monopoly property portfolio through a single-player dashbo
 
 ## Branch Comparison
 
-### Provider (`main`)
+### Provider (`feature-provider-base`)
 - `GameProvider extends ChangeNotifier`
 - `context.watch<GameProvider>()` / `context.read<GameProvider>()`
 - Dialogs require `ChangeNotifierProvider.value` wrapping to access state
 - Manual `_isLoading`, `_error`, `notifyListeners()`
 
-### Riverpod (`riverpod`)
+### Riverpod (`feature-riverpod-base`)
 - `GameNotifier extends AsyncNotifier<GameState>`
 - `ref.watch(gameNotifierProvider)` / `ref.read(gameNotifierProvider.notifier)`
 - Dialogs and sheets access providers directly — no wrapping needed
 - `AsyncValue` replaces manual loading/error fields
 - Compile-time safety (no runtime provider-not-found errors)
+
+### Cubit (`feature-cubit-base`)
+- `GameCubit extends Cubit<GameState>` with sealed class state hierarchy
+- `context.watch<GameCubit>()` / `context.read<GameCubit>()`
+- Dialogs require `BlocProvider.value` wrapping (tree-scoped, like Provider)
+- `GameInitial`, `GameLoading`, `GameLoaded`, `GameError` — exhaustive pattern matching, no nullable fields
+- Widgets return to standard `StatelessWidget` / `StatefulWidget` (no Consumer variants)
+- Constructor injection for dependencies (testable without widget tree)
+
+### Quick Reference
+
+| Aspect | Provider | Riverpod | Cubit |
+|---|---|---|---|
+| State class | Mutable ChangeNotifier | Immutable + AsyncValue | Sealed class hierarchy |
+| Async handling | Manual `_isLoading`/`_error` | `AsyncValue` (built-in) | Sealed states (explicit) |
+| Widget types | Standard Flutter | Consumer variants | Standard Flutter |
+| Dialog scoping | `ChangeNotifierProvider.value` | None needed | `BlocProvider.value` |
+| Testability | Context-dependent | Override via ProviderScope | Constructor injection |
 
 ---
 
@@ -86,20 +104,19 @@ Players manage a full Monopoly property portfolio through a single-player dashbo
 
 ---
 
-## Project Structure
+## Project Structure (Cubit branch)
 
 ```
 lib/
+├── cubit/
+│   ├── game_cubit.dart            # Cubit with API actions + game rules delegates
+│   └── game_state.dart            # Sealed state: Initial, Loading, Loaded, Error
 ├── data/
 │   └── property_data.dart         # Static property definitions (28 properties)
 ├── models/
 │   ├── color_group.dart           # Color group enum with house costs
 │   ├── player.dart                # Player model
 │   └── property.dart              # Property model with rent tiers
-├── providers/                     # State layer (varies by branch)
-│   ├── game_state.dart            # Immutable state class (Riverpod)
-│   ├── game_notifier.dart         # AsyncNotifier (Riverpod)
-│   └── providers.dart             # Provider declarations (Riverpod)
 ├── rules/
 │   └── game_rules.dart            # Pure game logic (shared across branches)
 ├── screens/

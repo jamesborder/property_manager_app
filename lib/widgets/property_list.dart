@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
+import '../cubit/game_state.dart';
 import 'property_list_item.dart';
 import 'property_deed_dialog.dart';
 
-class PropertyList extends ConsumerWidget {
+class PropertyList extends StatelessWidget {
 
   /// Pass Go Function from Parent Widget
   final VoidCallback onPassGo;
@@ -15,8 +16,8 @@ class PropertyList extends ConsumerWidget {
   final ScrollController scrollController = ScrollController();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(gameNotifierProvider).requireValue;
+  Widget build(BuildContext context) {
+    final state = context.watch<GameCubit>().state as GameLoaded;
     final properties = state.properties;
 
     return ListView.builder(
@@ -67,9 +68,13 @@ class PropertyList extends ConsumerWidget {
   }
 
   void _showPropertyDetail(BuildContext context, String propertyId) {
+    final cubit = context.read<GameCubit>();
     showDialog(
       context: context,
-      builder: (_) => PropertyDeedDialog(propertyId: propertyId),
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: PropertyDeedDialog(propertyId: propertyId),
+      ),
     );
   }
 }

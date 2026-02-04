@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../models/property.dart';
-import '../providers/game_notifier.dart';
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
+import '../cubit/game_state.dart';
 
-class PropertyDeedDialog extends ConsumerWidget {
+class PropertyDeedDialog extends StatelessWidget {
   final String propertyId;
 
   const PropertyDeedDialog({super.key, required this.propertyId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(gameNotifierProvider).requireValue;
+  Widget build(BuildContext context) {
+    final state = context.watch<GameCubit>().state as GameLoaded;
     final property = state.properties.firstWhere((p) => p.id == propertyId);
 
     return Dialog(
@@ -256,17 +256,17 @@ class _StreetRentTable extends StatelessWidget {
   }
 }
 
-class _RailroadRentTable extends ConsumerWidget {
+class _RailroadRentTable extends StatelessWidget {
   final Property property;
 
   const _RailroadRentTable({required this.property});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(gameNotifierProvider);
-    final notifier = ref.read(gameNotifierProvider.notifier);
+  Widget build(BuildContext context) {
+    context.watch<GameCubit>();
+    final cubit = context.read<GameCubit>();
     final labels = ['1 Railroad', '2 Railroads', '3 Railroads', '4 Railroads'];
-    final ownedCount = notifier.getOwnedRailroadCount();
+    final ownedCount = cubit.getOwnedRailroadCount();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,15 +343,15 @@ class _RailroadRentTable extends ConsumerWidget {
   }
 }
 
-class _UtilityRentInfo extends ConsumerWidget {
+class _UtilityRentInfo extends StatelessWidget {
   const _UtilityRentInfo();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(gameNotifierProvider);
-    final notifier = ref.read(gameNotifierProvider.notifier);
-    final ownedCount = notifier.getOwnedUtilityCount();
-    final multiplier = notifier.getUtilityMultiplier();
+  Widget build(BuildContext context) {
+    context.watch<GameCubit>();
+    final cubit = context.read<GameCubit>();
+    final ownedCount = cubit.getOwnedUtilityCount();
+    final multiplier = cubit.getUtilityMultiplier();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,17 +486,17 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _ActionButtons extends ConsumerWidget {
+class _ActionButtons extends StatelessWidget {
   final Property property;
 
   const _ActionButtons({required this.property});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(gameNotifierProvider.notifier);
+  Widget build(BuildContext context) {
+    final cubit = context.read<GameCubit>();
 
     if (!property.isOwned) {
-      return SizedBox(width: double.infinity, child: _buildPurchaseButton(context, notifier));
+      return SizedBox(width: double.infinity, child: _buildPurchaseButton(context, cubit));
     }
 
     return Column(
@@ -505,26 +505,26 @@ class _ActionButtons extends ConsumerWidget {
         if (property.isStreet && !property.isMortgaged) ...[
           Row(
             children: [
-              Expanded(child: _buildHouseButton(context, notifier)),
+              Expanded(child: _buildHouseButton(context, cubit)),
               const SizedBox(width: 8),
-              Expanded(child: _buildSellImprovementButton(context, notifier)),
+              Expanded(child: _buildSellImprovementButton(context, cubit)),
             ],
           ),
           const SizedBox(height: 8),
         ],
-        _buildMortgageButton(context, notifier),
+        _buildMortgageButton(context, cubit),
         const SizedBox(height: 8),
-        _buildReleaseButton(context, notifier),
+        _buildReleaseButton(context, cubit),
       ],
     );
   }
 
-  Widget _buildPurchaseButton(BuildContext context, GameNotifier notifier) {
-    final canPurchase = notifier.canPurchase(property);
+  Widget _buildPurchaseButton(BuildContext context, GameCubit cubit) {
+    final canPurchase = cubit.canPurchase(property);
     return FilledButton.icon(
       onPressed: canPurchase
           ? () async {
-              final success = await notifier.purchaseProperty(property);
+              final success = await cubit.purchaseProperty(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Purchased ${property.name}!');
               }
@@ -543,9 +543,9 @@ class _ActionButtons extends ConsumerWidget {
     );
   }
 
-  Widget _buildHouseButton(BuildContext context, GameNotifier notifier) {
-    final canBuildHouse = notifier.canBuildHouse(property);
-    final canBuildHotel = notifier.canBuildHotel(property);
+  Widget _buildHouseButton(BuildContext context, GameCubit cubit) {
+    final canBuildHouse = cubit.canBuildHouse(property);
+    final canBuildHotel = cubit.canBuildHotel(property);
 
     if (canBuildHotel || property.houseCount == 4) {
       return FilledButton.tonal(
@@ -556,7 +556,7 @@ class _ActionButtons extends ConsumerWidget {
         ),
         onPressed: canBuildHotel
             ? () async {
-                final success = await notifier.buildHotel(property);
+                final success = await cubit.buildHotel(property);
                 if (success && context.mounted) {
                   _showSnackBar(context, 'Built hotel on ${property.name}!');
                 }
@@ -574,7 +574,7 @@ class _ActionButtons extends ConsumerWidget {
       ),
       onPressed: canBuildHouse
           ? () async {
-              final success = await notifier.buildHouse(property);
+              final success = await cubit.buildHouse(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Built house on ${property.name}!');
               }
@@ -584,8 +584,8 @@ class _ActionButtons extends ConsumerWidget {
     );
   }
 
-  Widget _buildSellImprovementButton(BuildContext context, GameNotifier notifier) {
-    final canSell = notifier.canSellImprovement(property);
+  Widget _buildSellImprovementButton(BuildContext context, GameCubit cubit) {
+    final canSell = cubit.canSellImprovement(property);
     return FilledButton.tonal(
       style: FilledButton.styleFrom(
         backgroundColor: Colors.red.withAlpha(50),
@@ -595,7 +595,7 @@ class _ActionButtons extends ConsumerWidget {
       ),
       onPressed: canSell
           ? () async {
-              final success = await notifier.sellImprovement(property);
+              final success = await cubit.sellImprovement(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Sold improvement for \$${property.houseCost ~/ 2}');
               }
@@ -605,9 +605,9 @@ class _ActionButtons extends ConsumerWidget {
     );
   }
 
-  Widget _buildMortgageButton(BuildContext context, GameNotifier notifier) {
+  Widget _buildMortgageButton(BuildContext context, GameCubit cubit) {
     if (property.isMortgaged) {
-      final canUnmortgage = notifier.canUnmortgage(property);
+      final canUnmortgage = cubit.canUnmortgage(property);
       return OutlinedButton(
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(
@@ -616,7 +616,7 @@ class _ActionButtons extends ConsumerWidget {
         ),
         onPressed: canUnmortgage
             ? () async {
-                final success = await notifier.unmortgage(property);
+                final success = await cubit.unmortgage(property);
                 if (success && context.mounted) {
                   _showSnackBar(context, 'Unmortgaged ${property.name}');
                 }
@@ -626,7 +626,7 @@ class _ActionButtons extends ConsumerWidget {
       );
     }
 
-    final canMortgage = notifier.canMortgage(property);
+    final canMortgage = cubit.canMortgage(property);
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
         shape: RoundedRectangleBorder(
@@ -635,7 +635,7 @@ class _ActionButtons extends ConsumerWidget {
       ),
       onPressed: canMortgage
           ? () async {
-              final success = await notifier.mortgage(property);
+              final success = await cubit.mortgage(property);
               if (success && context.mounted) {
                 _showSnackBar(context, 'Mortgaged for \$${property.mortgageValue}');
               }
@@ -645,10 +645,10 @@ class _ActionButtons extends ConsumerWidget {
     );
   }
 
-  Widget _buildReleaseButton(BuildContext context, GameNotifier notifier) {
-    final canRelease = notifier.canReleaseProperty(property);
+  Widget _buildReleaseButton(BuildContext context, GameCubit cubit) {
+    final canRelease = cubit.canReleaseProperty(property);
     return OutlinedButton.icon(
-      onPressed: canRelease ? () => _showReleaseConfirmation(context, notifier) : null,
+      onPressed: canRelease ? () => _showReleaseConfirmation(context, cubit) : null,
       icon: const Icon(Icons.output),
       label: const Text('Release Property'),
       style: OutlinedButton.styleFrom(
@@ -660,7 +660,7 @@ class _ActionButtons extends ConsumerWidget {
     );
   }
 
-  void _showReleaseConfirmation(BuildContext context, GameNotifier notifier) {
+  void _showReleaseConfirmation(BuildContext context, GameCubit cubit) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -677,7 +677,7 @@ class _ActionButtons extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final success = await notifier.releaseProperty(property);
+              final success = await cubit.releaseProperty(property);
               if (success && context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(

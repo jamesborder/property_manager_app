@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
 
-class TransactionSheet extends ConsumerStatefulWidget {
+class TransactionSheet extends StatefulWidget {
   const TransactionSheet({super.key});
 
   @override
-  ConsumerState<TransactionSheet> createState() => _TransactionSheetState();
+  State<TransactionSheet> createState() => _TransactionSheetState();
 }
 
-class _TransactionSheetState extends ConsumerState<TransactionSheet> {
+class _TransactionSheetState extends State<TransactionSheet> {
   final _amountController = TextEditingController();
   bool _isReceiving = true;
   String? _errorMessage;
@@ -50,8 +50,8 @@ class _TransactionSheetState extends ConsumerState<TransactionSheet> {
       _errorMessage = null;
     });
 
-    final notifier = ref.read(gameNotifierProvider.notifier);
-    final success = await notifier.adjustCash(amount);
+    final cubit = context.read<GameCubit>();
+    final success = await cubit.adjustCash(amount);
 
     if (!mounted) return;
 

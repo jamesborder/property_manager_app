@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
 import '../widgets/assets_footer.dart';
 import '../widgets/balance_header.dart';
 import '../widgets/property_list.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: Container(
@@ -22,7 +22,7 @@ class HomeScreen extends ConsumerWidget {
               Expanded(
                 child: PropertyList(
                   onPassGo: () {
-                    _onPassGo(context, ref);
+                    _onPassGo(context);
                   },
                 ),
               ),
@@ -32,16 +32,16 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.small(
-        onPressed: () => _showResetConfirmation(context, ref),
+        onPressed: () => _showResetConfirmation(context),
         tooltip: 'Reset Game',
         child: const Icon(Icons.refresh),
       ),
     );
   }
 
-  void _onPassGo(BuildContext context, WidgetRef ref) async {
-    final notifier = ref.read(gameNotifierProvider.notifier);
-    final success = await notifier.adjustCash(200);
+  void _onPassGo(BuildContext context) async {
+    final cubit = context.read<GameCubit>();
+    final success = await cubit.adjustCash(200);
 
     if (!success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -59,7 +59,7 @@ class HomeScreen extends ConsumerWidget {
     }
   }
 
-  void _showResetConfirmation(BuildContext context, WidgetRef ref) {
+  void _showResetConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -75,8 +75,8 @@ class HomeScreen extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final notifier = ref.read(gameNotifierProvider.notifier);
-              final success = await notifier.resetGame();
+              final cubit = context.read<GameCubit>();
+              final success = await cubit.resetGame();
               if (success && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Game reset!')),

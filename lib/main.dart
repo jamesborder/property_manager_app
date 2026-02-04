@@ -1,9 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'cubit/game_cubit.dart';
+import 'cubit/game_state.dart';
 import 'firebase_options.dart';
-import 'providers/providers.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
@@ -15,7 +16,12 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(
+    BlocProvider(
+      create: (_) => GameCubit(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -39,14 +45,14 @@ class MyApp extends StatelessWidget {
 }
 
 /// Handles async startup: checks for saved player, routes accordingly
-class _AppStartup extends ConsumerStatefulWidget {
+class _AppStartup extends StatefulWidget {
   const _AppStartup();
 
   @override
-  ConsumerState<_AppStartup> createState() => _AppStartupState();
+  State<_AppStartup> createState() => _AppStartupState();
 }
 
-class _AppStartupState extends ConsumerState<_AppStartup> {
+class _AppStartupState extends State<_AppStartup> {
   @override
   void initState() {
     super.initState();
@@ -64,16 +70,19 @@ class _AppStartupState extends ConsumerState<_AppStartup> {
         return;
       }
 
-      // Set player ID — triggers gameNotifierProvider.build()
-      ref.read(playerIdProvider.notifier).state = savedPlayer;
-
-      // Await the game state load
-      await ref.read(gameNotifierProvider.future);
+      // Load game state for saved player
+      final cubit = context.read<GameCubit>();
+      await cubit.loadGame(savedPlayer);
 
       if (!mounted) return;
-      _navigateToHome();
+
+      if (cubit.state is GameLoaded) {
+        _navigateToHome();
+      } else {
+        await AuthService.clearPlayer();
+        if (mounted) _navigateToLogin();
+      }
     } catch (e) {
-      // API error or any startup failure — clear saved player, go to login
       await AuthService.clearPlayer();
       if (mounted) _navigateToLogin();
     }

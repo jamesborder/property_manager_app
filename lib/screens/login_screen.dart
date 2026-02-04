@@ -1,19 +1,20 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
+import '../cubit/game_state.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   static const List<String> _allowedPlayers = [
     'Jim',
   ];
@@ -52,34 +53,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      if (kDebugMode) print('[Login] Setting playerIdProvider for $matchedPlayer');
+      if (kDebugMode) print('[Login] Loading game for $matchedPlayer');
 
-      // Set player ID — triggers gameNotifierProvider.build()
-      ref.read(playerIdProvider.notifier).state = matchedPlayer;
-
-      // Await the game state load
-      if (kDebugMode) print('[Login] Awaiting game state...');
-      await ref.read(gameNotifierProvider.future);
+      final cubit = context.read<GameCubit>();
+      await cubit.loadGame(matchedPlayer);
 
       if (!mounted) return;
 
-      // Save player for auto-login
-      if (kDebugMode) print('[Login] Saving player...');
-      await AuthService.savePlayer(matchedPlayer);
+      if (cubit.state is GameLoaded) {
+        if (kDebugMode) print('[Login] Saving player...');
+        await AuthService.savePlayer(matchedPlayer);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      if (kDebugMode) print('[Login] Navigating to home...');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+        if (kDebugMode) print('[Login] Navigating to home...');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else if (cubit.state is GameError) {
+        final error = cubit.state as GameError;
+        setState(() {
+          _isLoading = false;
+          _errorText = 'Failed to load game: ${error.message}';
+        });
+      }
     } catch (e, stack) {
       if (kDebugMode) {
         print('[Login] Error: $e');
         print(stack);
       }
-      // Reset player ID on failure
-      ref.read(playerIdProvider.notifier).state = null;
       if (mounted) {
         setState(() {
           _isLoading = false;

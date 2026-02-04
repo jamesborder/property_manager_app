@@ -1,18 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../models/property.dart';
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
+import '../cubit/game_state.dart';
 
-class PropertyListItem extends ConsumerWidget {
+class PropertyListItem extends StatelessWidget {
   final Property property;
   final VoidCallback onTap;
 
   const PropertyListItem({super.key, required this.property, required this.onTap});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
       decoration: BoxDecoration(
@@ -34,7 +35,7 @@ class PropertyListItem extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (property.isOwned) ...[
-                          _buildPlayerOwnedPropertyCard(context, ref),
+                          _buildPlayerOwnedPropertyCard(context),
                         ] else ...[
                           _buildAvailablePropertyCard(context),
                         ],
@@ -93,7 +94,7 @@ class PropertyListItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlayerOwnedPropertyCard(BuildContext context, WidgetRef ref) {
+  Widget _buildPlayerOwnedPropertyCard(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -113,7 +114,7 @@ class PropertyListItem extends ConsumerWidget {
               'Purchase price: \$${property.purchasePrice}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontSize: 16, fontWeight: FontWeight.w500),
             ),
-            _buildRentInfo(context, ref),
+            _buildRentInfo(context),
           ],
         ),
         if (property.isMortgaged) ...[
@@ -128,7 +129,7 @@ class PropertyListItem extends ConsumerWidget {
         ] else ...[
           ElevatedButton(
             onPressed: () {
-              _collectRent(context, ref);
+              _collectRent(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade700,
@@ -143,11 +144,13 @@ class PropertyListItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildRentInfo(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(gameNotifierProvider.notifier);
+  Widget _buildRentInfo(BuildContext context) {
+    // Watch for state changes to rebuild rent display
+    context.watch<GameCubit>();
+    final cubit = context.read<GameCubit>();
 
-    var actualRent = notifier.getRentDisplayString(property);
-    final hasBonus = notifier.hasColorGroupBonus(property);
+    var actualRent = cubit.getRentDisplayString(property);
+    final hasBonus = cubit.hasColorGroupBonus(property);
 
     return Row(
       children: [
@@ -173,10 +176,10 @@ class PropertyListItem extends ConsumerWidget {
     );
   }
 
-  void _collectRent(BuildContext context, WidgetRef ref) {
+  void _collectRent(BuildContext context) {
     if (kDebugMode) print('Collect rent for ${property.name}');
 
-    final notifier = ref.read(gameNotifierProvider.notifier);
+    final cubit = context.read<GameCubit>();
 
     /// If property is a utility, prompt for dice roll value
     if (property.isUtility) {
@@ -217,14 +220,14 @@ class PropertyListItem extends ConsumerWidget {
                     return;
                   }
 
-                  final multiplier = notifier.getUtilityMultiplier();
+                  final multiplier = cubit.getUtilityMultiplier();
                   final rentValue = diceRoll * multiplier;
 
                   if (kDebugMode) print('Utility rent: $diceRoll x $multiplier = $rentValue');
 
                   Navigator.of(dialogContext).pop();
 
-                  final success = await notifier.adjustCash(rentValue);
+                  final success = await cubit.adjustCash(rentValue);
 
                   if (success && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -243,9 +246,9 @@ class PropertyListItem extends ConsumerWidget {
     }
 
     /// Get actual rent amount
-    var rentDisplayString = notifier.getRentDisplayString(property);
-    int rentValue = notifier.getActualRentValue(property);
-    final hasBonus = notifier.hasColorGroupBonus(property);
+    var rentDisplayString = cubit.getRentDisplayString(property);
+    int rentValue = cubit.getActualRentValue(property);
+    final hasBonus = cubit.hasColorGroupBonus(property);
 
     if (kDebugMode) print('Collecting rent: $rentDisplayString (from base rent: ${property.currentRent}, bonus applied: $hasBonus)');
 
@@ -265,7 +268,7 @@ class PropertyListItem extends ConsumerWidget {
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
-                final success = await notifier.adjustCash(rentValue);
+                final success = await cubit.adjustCash(rentValue);
                 if (success && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Collected $rentDisplayString from ${property.name}')),
@@ -281,7 +284,7 @@ class PropertyListItem extends ConsumerWidget {
   }
 }
 
-/// Status badge widget — no provider access, pure widget
+/// Status badge widget — no state management access, pure widget
 class _PropertyStatusBadge extends StatelessWidget {
   final Property property;
 

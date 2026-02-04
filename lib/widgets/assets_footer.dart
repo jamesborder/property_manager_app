@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
+import '../cubit/game_state.dart';
 
-class AssetsFooter extends ConsumerWidget {
+class AssetsFooter extends StatelessWidget {
   const AssetsFooter({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(gameNotifierProvider).requireValue;
+  Widget build(BuildContext context) {
+    final state = context.watch<GameCubit>().state as GameLoaded;
     final totalAssets = state.totalAssets;
     final ownedCount = state.ownedProperties.length;
 

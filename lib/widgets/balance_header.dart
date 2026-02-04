@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/providers.dart';
+import '../cubit/game_cubit.dart';
+import '../cubit/game_state.dart';
 import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
 import 'transaction_sheet.dart';
 
-class BalanceHeader extends ConsumerWidget {
+class BalanceHeader extends StatelessWidget {
   const BalanceHeader({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(gameNotifierProvider).requireValue;
+  Widget build(BuildContext context) {
+    final state = context.watch<GameCubit>().state as GameLoaded;
     final cash = state.cash;
     final playerName = state.playerId;
 
@@ -50,7 +51,7 @@ class BalanceHeader extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         GestureDetector(
-                          onTap: () => _showLogoutConfirmation(context, ref),
+                          onTap: () => _showLogoutConfirmation(context),
                           child: Icon(
                             Icons.logout,
                             color: Colors.white.withValues(alpha: 0.7),
@@ -92,14 +93,18 @@ class BalanceHeader extends ConsumerWidget {
   }
 
   void _showTransactionSheet(BuildContext context) {
+    final cubit = context.read<GameCubit>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const TransactionSheet(),
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: const TransactionSheet(),
+      ),
     );
   }
 
-  void _showLogoutConfirmation(BuildContext context, WidgetRef ref) {
+  void _showLogoutConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -115,7 +120,6 @@ class BalanceHeader extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               await AuthService.clearPlayer();
-              ref.read(playerIdProvider.notifier).state = null;
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
