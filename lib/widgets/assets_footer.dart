@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/game_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AssetsFooter extends StatelessWidget {
+import '../providers/providers.dart';
+
+class AssetsFooter extends ConsumerWidget {
   const AssetsFooter({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<GameProvider>();
-    final totalAssets = provider.totalAssets;
-    final ownedCount = provider.ownedProperties.length;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(gameNotifierProvider).requireValue;
+    final totalAssets = state.totalAssets;
+    final ownedCount = state.ownedProperties.length;
 
     return Container(
       width: double.infinity,

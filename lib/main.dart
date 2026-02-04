@@ -1,22 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'firebase_options.dart';
-import 'providers/game_provider.dart';
+import 'providers/providers.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const MyApp());
-
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -25,7 +24,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Property Manager',
+      title: 'HSOA-Opoly',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -40,15 +39,14 @@ class MyApp extends StatelessWidget {
 }
 
 /// Handles async startup: checks for saved player, routes accordingly
-class _AppStartup extends StatefulWidget {
+class _AppStartup extends ConsumerStatefulWidget {
   const _AppStartup();
 
   @override
-  State<_AppStartup> createState() => _AppStartupState();
-
+  ConsumerState<_AppStartup> createState() => _AppStartupState();
 }
 
-class _AppStartupState extends State<_AppStartup> {
+class _AppStartupState extends ConsumerState<_AppStartup> {
   @override
   void initState() {
     super.initState();
@@ -66,22 +64,17 @@ class _AppStartupState extends State<_AppStartup> {
         return;
       }
 
-      // Auto-login: load game state
-      final provider = GameProvider(playerId: savedPlayer);
-      await provider.loadGameState();
+      // Set player ID — triggers gameNotifierProvider.build()
+      ref.read(playerIdProvider.notifier).state = savedPlayer;
+
+      // Await the game state load
+      await ref.read(gameNotifierProvider.future);
 
       if (!mounted) return;
-
-      if (provider.error != null) {
-        // API error - clear saved player and go to login
-        await AuthService.clearPlayer();
-        _navigateToLogin();
-        return;
-      }
-
-      _navigateToHome(provider);
+      _navigateToHome();
     } catch (e) {
-      // Any error during startup - just go to login
+      // API error or any startup failure — clear saved player, go to login
+      await AuthService.clearPlayer();
       if (mounted) _navigateToLogin();
     }
   }
@@ -92,14 +85,9 @@ class _AppStartupState extends State<_AppStartup> {
     );
   }
 
-  void _navigateToHome(GameProvider provider) {
+  void _navigateToHome() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider.value(
-          value: provider,
-          child: const HomeScreen(),
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
   }
 

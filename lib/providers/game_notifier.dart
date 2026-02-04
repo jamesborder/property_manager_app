@@ -1,39 +1,37 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../data/property_data.dart';
-import '../models/player.dart';
 import '../models/property.dart';
 import '../rules/game_rules.dart';
 import '../services/api_service.dart';
+import 'game_state.dart';
+import 'providers.dart';
 
-class GameProvider extends ChangeNotifier {
-  final ApiService _api;
-  final Player _player;
-  final List<Property> _properties;
+class GameNotifier extends AsyncNotifier<GameState> {
+  late final ApiService _api;
+  late final List<Property> _properties;
 
-  bool _isLoading = false;
-  String? _error;
+  @override
+  Future<GameState> build() async {
+    _api = ApiService();
+    _properties = createInitialProperties();
 
-  GameProvider({
-    required String playerId,
-    ApiService? apiService,
-  })  : _api = apiService ?? ApiService(),
-        _player = Player(id: playerId, cash: 1500),
-        _properties = createInitialProperties();
+    final playerId = ref.watch(playerIdProvider);
+    if (playerId == null) {
+      throw StateError('No player ID set');
+    }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // GETTERS
-  // ─────────────────────────────────────────────────────────────────────────────
+    final response = await _api.getGameState(playerId);
+    _applyState(response);
 
-  String get playerId => _player.id;
-  int get cash => _player.cash;
-  List<Property> get properties => List.unmodifiable(_properties);
-  List<Property> get ownedProperties =>
-      _properties.where((p) => p.isOwned).toList();
-
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-
-  int get totalAssets => GameRules.totalAssets(cash, _properties);
+    return GameState(
+      playerId: playerId,
+      cash: response.cash,
+      properties: _properties,
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // GAME RULES DELEGATES
@@ -61,13 +59,13 @@ class GameProvider extends ChangeNotifier {
       GameRules.hasColorGroupBonus(property, _properties);
 
   bool canPurchase(Property property) =>
-      GameRules.canPurchase(property, cash);
+      GameRules.canPurchase(property, state.requireValue.cash);
 
   bool canBuildHouse(Property property) =>
-      GameRules.canBuildHouse(property, _properties, cash);
+      GameRules.canBuildHouse(property, _properties, state.requireValue.cash);
 
   bool canBuildHotel(Property property) =>
-      GameRules.canBuildHotel(property, _properties, cash);
+      GameRules.canBuildHotel(property, _properties, state.requireValue.cash);
 
   bool canSellImprovement(Property property) =>
       GameRules.canSellImprovement(property, _properties);
@@ -76,7 +74,7 @@ class GameProvider extends ChangeNotifier {
       GameRules.canMortgage(property, _properties);
 
   bool canUnmortgage(Property property) =>
-      GameRules.canUnmortgage(property, cash);
+      GameRules.canUnmortgage(property, state.requireValue.cash);
 
   bool canReleaseProperty(Property property) =>
       GameRules.canReleaseProperty(property, _properties);
@@ -85,81 +83,72 @@ class GameProvider extends ChangeNotifier {
   // API ACTIONS
   // ─────────────────────────────────────────────────────────────────────────────
 
-  Future<void> loadGameState() async {
-    await _callApi(() => _api.getGameState(playerId));
-  }
+  Future<bool> adjustCash(int amount) =>
+      _callApi(() => _api.adjustCash(state.requireValue.playerId, amount));
 
-  Future<bool> adjustCash(int amount) async {
-    return _callApi(() => _api.adjustCash(playerId, amount));
-  }
+  Future<bool> purchaseProperty(Property property) =>
+      _callApi(() => _api.purchaseProperty(state.requireValue.playerId, property.id));
 
-  Future<bool> purchaseProperty(Property property) async {
-    return _callApi(() => _api.purchaseProperty(playerId, property.id));
-  }
+  Future<bool> buildHouse(Property property) =>
+      _callApi(() => _api.buildHouse(state.requireValue.playerId, property.id));
 
-  Future<bool> buildHouse(Property property) async {
-    return _callApi(() => _api.buildHouse(playerId, property.id));
-  }
+  Future<bool> buildHotel(Property property) =>
+      _callApi(() => _api.buildHotel(state.requireValue.playerId, property.id));
 
-  Future<bool> buildHotel(Property property) async {
-    return _callApi(() => _api.buildHotel(playerId, property.id));
-  }
+  Future<bool> sellImprovement(Property property) =>
+      _callApi(() => _api.sellImprovement(state.requireValue.playerId, property.id));
 
-  Future<bool> sellImprovement(Property property) async {
-    return _callApi(() => _api.sellImprovement(playerId, property.id));
-  }
+  Future<bool> mortgage(Property property) =>
+      _callApi(() => _api.mortgage(state.requireValue.playerId, property.id));
 
-  Future<bool> mortgage(Property property) async {
-    return _callApi(() => _api.mortgage(playerId, property.id));
-  }
+  Future<bool> unmortgage(Property property) =>
+      _callApi(() => _api.unmortgage(state.requireValue.playerId, property.id));
 
-  Future<bool> unmortgage(Property property) async {
-    return _callApi(() => _api.unmortgage(playerId, property.id));
-  }
+  Future<bool> releaseProperty(Property property) =>
+      _callApi(() => _api.releaseProperty(state.requireValue.playerId, property.id));
 
-  Future<bool> releaseProperty(Property property) async {
-    return _callApi(() => _api.releaseProperty(playerId, property.id));
-  }
-
-  Future<bool> resetGame() async {
-    return _callApi(() => _api.resetGame(playerId));
-  }
+  Future<bool> resetGame() =>
+      _callApi(() => _api.resetGame(state.requireValue.playerId));
 
   // ─────────────────────────────────────────────────────────────────────────────
   // INTERNAL HELPERS
   // ─────────────────────────────────────────────────────────────────────────────
 
-  /// Call API and apply returned state
+  /// Call API and apply returned state. Returns true on success.
+  ///
+  /// Preserves previous state during API calls — no loading flash for actions.
+  /// Only build() uses the full AsyncLoading state.
   Future<bool> _callApi(
     Future<GameStateResponse> Function() apiCall,
   ) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    final previous = state.valueOrNull;
 
     try {
       final response = await apiCall();
       _applyState(response);
-      _isLoading = false;
-      notifyListeners();
+      state = AsyncData(GameState(
+        playerId: previous?.playerId ?? response.playerId,
+        cash: response.cash,
+        properties: _properties,
+      ));
       return true;
-    } on ApiException catch (e) {
-      _error = e.message;
-      _isLoading = false;
-      notifyListeners();
+    } on ApiException catch (e, stack) {
+      state = AsyncError(e.message, stack);
+      if (previous != null) {
+        state = AsyncData(previous);
+      }
       return false;
-    } catch (e) {
-      _error = 'Connection error: $e';
-      _isLoading = false;
-      notifyListeners();
+    } catch (e, stack) {
+      state = AsyncError('Connection error: $e', stack);
+      if (previous != null) {
+        state = AsyncData(previous);
+      }
       return false;
     }
   }
 
-  /// Apply API response to local state
+  /// Apply API response to local property state.
   void _applyState(GameStateResponse response) {
-    _player.cash = response.cash;
-
     final ownedMap = <String, OwnedPropertyResponse>{};
     for (final owned in response.properties) {
       ownedMap[owned.propertyId] = owned;
@@ -177,11 +166,5 @@ class GameProvider extends ChangeNotifier {
         property.isMortgaged = false;
       }
     }
-  }
-
-  /// Clear error message
-  void clearError() {
-    _error = null;
-    notifyListeners();
   }
 }

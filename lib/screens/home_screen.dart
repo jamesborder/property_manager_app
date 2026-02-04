@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/game_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/providers.dart';
 import '../widgets/assets_footer.dart';
 import '../widgets/balance_header.dart';
 import '../widgets/property_list.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Center(
         child: Container(
@@ -21,7 +22,7 @@ class HomeScreen extends StatelessWidget {
               Expanded(
                 child: PropertyList(
                   onPassGo: () {
-                    _onPassGo(context);
+                    _onPassGo(context, ref);
                   },
                 ),
               ),
@@ -31,39 +32,34 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.small(
-        onPressed: () => _showResetConfirmation(context),
+        onPressed: () => _showResetConfirmation(context, ref),
         tooltip: 'Reset Game',
         child: const Icon(Icons.refresh),
       ),
     );
   }
 
-  void _onPassGo(BuildContext context) async {
+  void _onPassGo(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(gameNotifierProvider.notifier);
+    final success = await notifier.adjustCash(200);
 
-    final provider = context.read<GameProvider>();
-    final success = await provider.adjustCash(200);
-
-    if (!success) {
-
-      /// Shouldn't happen, but just in case
+    if (!success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Failed to collect cash'),
+        const SnackBar(
+          content: Text('Failed to collect cash'),
           backgroundColor: Colors.red,
         ),
       );
     }
 
     if (success && context.mounted) {
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Collected \$200 for passing Go!')),
       );
-
     }
   }
 
-  void _showResetConfirmation(BuildContext context) {
+  void _showResetConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -79,16 +75,16 @@ class HomeScreen extends StatelessWidget {
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final provider = context.read<GameProvider>();
-              final success = await provider.resetGame();
+              final notifier = ref.read(gameNotifierProvider.notifier);
+              final success = await notifier.resetGame();
               if (success && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Game reset!')),
                 );
               } else if (!success && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(provider.error ?? 'Failed to reset'),
+                  const SnackBar(
+                    content: Text('Failed to reset'),
                     backgroundColor: Colors.red,
                   ),
                 );

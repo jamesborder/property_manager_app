@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/game_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/providers.dart';
 import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
 import 'transaction_sheet.dart';
 
-class BalanceHeader extends StatelessWidget {
+class BalanceHeader extends ConsumerWidget {
   const BalanceHeader({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<GameProvider>();
-    final cash = provider.cash;
-    final playerName = provider.playerId;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(gameNotifierProvider).requireValue;
+    final cash = state.cash;
+    final playerName = state.playerId;
 
     return GestureDetector(
       onTap: () => _showTransactionSheet(context),
@@ -49,7 +50,7 @@ class BalanceHeader extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         GestureDetector(
-                          onTap: () => _showLogoutConfirmation(context),
+                          onTap: () => _showLogoutConfirmation(context, ref),
                           child: Icon(
                             Icons.logout,
                             color: Colors.white.withValues(alpha: 0.7),
@@ -91,18 +92,14 @@ class BalanceHeader extends StatelessWidget {
   }
 
   void _showTransactionSheet(BuildContext context) {
-    final provider = context.read<GameProvider>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => ChangeNotifierProvider.value(
-        value: provider,
-        child: const TransactionSheet(),
-      ),
+      builder: (_) => const TransactionSheet(),
     );
   }
 
-  void _showLogoutConfirmation(BuildContext context) {
+  void _showLogoutConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -118,6 +115,7 @@ class BalanceHeader extends StatelessWidget {
           FilledButton(
             onPressed: () async {
               await AuthService.clearPlayer();
+              ref.read(playerIdProvider.notifier).state = null;
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
