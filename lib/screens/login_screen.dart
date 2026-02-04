@@ -160,7 +160,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                     Text(
-                      'NestJS:PostgresSQL:Flutter:Riverpod',
+                      'NestJS:PostgresSQL:Flutter:Cubit',
                       style: TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                   ],
