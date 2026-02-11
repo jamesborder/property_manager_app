@@ -5,12 +5,19 @@ import 'package:hsoa_opoly/rules/game_rules.dart';
 import '../fixtures/test_properties.dart';
 
 void main() {
+  print('\n${'═' * 70}');
+  print('GAME RULES TEST SUITE');
+  print('Testing pure Dart business logic — shared across all state management branches');
+  print('${'═' * 70}\n');
   // ═══════════════════════════════════════════════════════════════════════════
   // RENT CALCULATION
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Rent Calculation', () {
+    setUpAll(() => print('\n▶ RENT CALCULATION'));
+
     group('Street Properties', () {
+      setUpAll(() => print('  ├─ Street Properties'));
       test('base rent when property is owned without color group monopoly', () {
         final properties = brownColorGroup(
           mediterraneanOwned: true,
@@ -92,6 +99,7 @@ void main() {
     });
 
     group('Railroad Properties', () {
+      setUpAll(() => print('  ├─ Railroad Properties'));
       test('rent scales with number of railroads owned', () {
         final railroads = allRailroads(readingOwned: true);
         expect(
@@ -155,6 +163,7 @@ void main() {
     });
 
     group('Utility Properties', () {
+      setUpAll(() => print('  ├─ Utility Properties'));
       test('one utility owned returns 4x multiplier', () {
         final utilities = bothUtilities(electricOwned: true);
 
@@ -189,6 +198,7 @@ void main() {
     });
 
     group('Rent Display String', () {
+      setUpAll(() => print('  └─ Rent Display String'));
       test('street property shows dollar amount', () {
         final properties = brownColorGroup(mediterraneanOwned: true);
 
@@ -226,6 +236,7 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Color Group Bonus', () {
+    setUpAll(() => print('\n▶ COLOR GROUP BONUS'));
     test('hasColorGroupBonus returns true when owning full group with no houses', () {
       final properties = brownColorGroup(
         mediterraneanOwned: true,
@@ -291,6 +302,7 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Even-Build Rule (canBuildHouse)', () {
+    setUpAll(() => print('\n▶ EVEN-BUILD RULE (canBuildHouse)'));
     test('can build when all properties in group have same house count', () {
       final properties = brownColorGroup(
         mediterraneanOwned: true,
@@ -380,6 +392,7 @@ void main() {
   });
 
   group('Even-Build Rule (canBuildHotel)', () {
+    setUpAll(() => print('\n▶ EVEN-BUILD RULE (canBuildHotel)'));
     test('can build hotel when property has 4 houses and all in group have 4', () {
       final properties = brownColorGroup(
         mediterraneanOwned: true,
@@ -415,6 +428,7 @@ void main() {
   });
 
   group('Even-Build Rule (canSellImprovement)', () {
+    setUpAll(() => print('\n▶ EVEN-BUILD RULE (canSellImprovement)'));
     test('can sell improvement when property has most houses in group', () {
       final properties = brownColorGroup(
         mediterraneanOwned: true,
@@ -456,7 +470,10 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Mortgage Rules', () {
+    setUpAll(() => print('\n▶ MORTGAGE RULES'));
+
     group('canMortgage', () {
+      setUpAll(() => print('  ├─ canMortgage'));
       test('can mortgage owned property with no improvements', () {
         final properties = brownColorGroup(
           mediterraneanOwned: true,
@@ -517,6 +534,7 @@ void main() {
     });
 
     group('canUnmortgage', () {
+      setUpAll(() => print('  └─ canUnmortgage'));
       test('can unmortgage when property is mortgaged and have enough cash', () {
         final property = mediterranean(isOwned: true, isMortgaged: true);
 
@@ -544,6 +562,7 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Purchase Rules', () {
+    setUpAll(() => print('\n▶ PURCHASE RULES'));
     test('can purchase unowned property with sufficient cash', () {
       final property = mediterranean();
 
@@ -569,6 +588,7 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Release Property Rules', () {
+    setUpAll(() => print('\n▶ RELEASE PROPERTY RULES'));
     test('can release owned property with no improvements', () {
       final properties = brownColorGroup(
         mediterraneanOwned: true,
@@ -620,6 +640,7 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Asset Calculation', () {
+    setUpAll(() => print('\n▶ ASSET CALCULATION'));
     test('total assets equals cash when no properties owned', () {
       final properties = brownColorGroup();
 
@@ -678,6 +699,7 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Color Group Helpers', () {
+    setUpAll(() => print('\n▶ COLOR GROUP HELPERS'));
     test('ownsFullColorGroup returns true when all properties in group are owned', () {
       final properties = brownColorGroup(
         mediterraneanOwned: true,

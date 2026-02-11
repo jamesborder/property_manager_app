@@ -4,11 +4,17 @@ import '../../lib/models/property.dart';
 import '../../lib/models/color_group.dart';
 
 void main() {
+  print('\n${'═' * 70}');
+  print('PROPERTY MODEL TEST SUITE');
+  print('Testing computed properties and model behavior');
+  print('${'═' * 70}\n');
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PROPERTY TYPE CLASSIFICATION
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Property Type Classification', () {
+    setUpAll(() => print('\n▶ PROPERTY TYPE CLASSIFICATION'));
     test('street properties return isStreet true', () {
       final property = mediterranean();
 
@@ -39,6 +45,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Mortgage Calculations', () {
+    setUpAll(() => print('\n▶ MORTGAGE CALCULATIONS'));
+
     test('mortgage value is half of purchase price', () {
       final mediterranean = Property(
         id: 'test',
@@ -94,6 +102,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('House Cost', () {
+    setUpAll(() => print('\n▶ HOUSE COST'));
+
     test('house cost comes from color group', () {
       expect(mediterranean().houseCost, 50); // Brown = $50
       expect(boardwalk().houseCost, 200); // Dark Blue = $200
@@ -113,6 +123,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Hotel Detection', () {
+    setUpAll(() => print('\n▶ HOTEL DETECTION'));
+
     test('hasHotel is true when street has 5 houses', () {
       final property = mediterranean(isOwned: true, houseCount: 5);
 
@@ -144,6 +156,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Current Rent', () {
+    setUpAll(() => print('\n▶ CURRENT RENT'));
+
     test('returns base rent when no houses', () {
       final property = mediterranean(isOwned: true);
 
@@ -182,6 +196,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Improvement Value', () {
+    setUpAll(() => print('\n▶ IMPROVEMENT VALUE'));
+
     test('returns zero for properties with no houses', () {
       final property = mediterranean(isOwned: true);
 
@@ -220,6 +236,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Asset Value', () {
+    setUpAll(() => print('\n▶ ASSET VALUE'));
+
     test('equals purchase price when no improvements', () {
       final property = mediterranean(isOwned: true);
 
@@ -254,6 +272,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('Status Text', () {
+    setUpAll(() => print('\n▶ STATUS TEXT'));
+
     test('returns bullet for unowned property', () {
       final property = mediterranean();
 
@@ -302,6 +322,8 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('copyWith', () {
+    setUpAll(() => print('\n▶ COPY WITH'));
+
     test('creates a new instance with specified fields changed', () {
       final original = mediterranean();
       final copy = original.copyWith(isOwned: true, houseCount: 3);
