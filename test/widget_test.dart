@@ -1,29 +1,15 @@
-// This is a basic Flutter widget test.
+// Widget tests placeholder.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:hsoa_opoly/main.dart';
+// For this project, the primary test value is in the pure Dart unit tests:
+// - test/rules/game_rules_test.dart — Core Monopoly game logic
+// - test/models/property_test.dart — Property model computed properties
+//
+// These tests demonstrate the testing pyramid philosophy: heavy unit tests
+// for business logic, which run fast and catch the most important bugs.
+//
+// Widget and integration tests would be added for critical user flows
+// (login, purchase, rent collection) in a production app.
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
-  });
+  // No widget tests yet — see unit tests in rules/ and models/
 }
